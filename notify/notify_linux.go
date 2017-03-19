@@ -7,11 +7,8 @@ import (
 	"os/exec"
 )
 
-func Notify(foundSong string, addedSong string) {
-	title := "ADD CURRENT SONG"
-	text := "Found: " + foundSong + "\nAdded: " + addedSong
-
-	cmd := exec.Command("notify-send", "ADD CURRENT SONG\nFound: "+foundSong+"\nAdded: "+addedSong)
+func Notify(foundSong string, savedSong string) {
+	cmd := exec.Command("notify-send", "SAVE CURRENT SONG\nFound: "+foundSong+"\nSaved: "+addedSong)
 	err := cmd.Run()
 
 	if err != nil 

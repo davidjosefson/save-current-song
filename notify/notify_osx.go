@@ -7,9 +7,9 @@ import (
 	"os/exec"
 )
 
-func Notify(foundSong string, addedSong string) {
-	title := "ADD CURRENT SONG"
-	text := "Found: " + foundSong + "\nAdded: " + addedSong
+func Notify(foundSong string, savedSong string) {
+	title := "SAVE CURRENT SONG"
+	text := "Found: " + foundSong + "\nSaved: " + savedSong
 
 	cmd := exec.Command("/usr/bin/osascript", "-e", "display notification \""+text+"\" with title \""+title+"\"")
 	err := cmd.Run()

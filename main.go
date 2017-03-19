@@ -1,13 +1,13 @@
 package main
 
 import (
-	"add-current-song/notify"
 	"encoding/json"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
 	"os"
+	"save-current-song/notify"
 	"strings"
 )
 
@@ -45,14 +45,15 @@ func main() {
 	log.Println("Adding song to playlist..")
 	err = addSongToPlaylist(token, spotifySong.SpotifyTracks.SpotifyItems[0].Id)
 	handleError(err, "adding song to playlist")
+	log.Println("Saved: " + spotifySong.SpotifyTracks.SpotifyItems[0].Artists[0].Name + " - " + spotifySong.SpotifyTracks.SpotifyItems[0].Name)
 
 	// SUCCESS
 	log.Println("Succeeded to add song to playlist!")
 
 	// SEND NOTIFICATION
 	foundSong := currentSong.RecentTracks.Tracks[0].Artist.Name + " - " + currentSong.RecentTracks.Tracks[0].Track
-	addedSong := spotifySong.SpotifyTracks.SpotifyItems[0].Artists[0].Name + " - " + spotifySong.SpotifyTracks.SpotifyItems[0].Name
-	notify.Notify(foundSong, addedSong)
+	savedSong := spotifySong.SpotifyTracks.SpotifyItems[0].Artists[0].Name + " - " + spotifySong.SpotifyTracks.SpotifyItems[0].Name
+	notify.Notify(foundSong, savedSong)
 }
 
 func initializeLogging() {
@@ -160,7 +161,6 @@ func searchSpotify(currentSong CurrentSong, token string) (SpotifySong, error) {
 
 	// SUCCESS
 	log.Println("Succeeded to search for song at Spotify!")
-	log.Println("Added: " + spotifySong.SpotifyTracks.SpotifyItems[0].Artists[0].Name + " - " + spotifySong.SpotifyTracks.SpotifyItems[0].Name)
 
 	return spotifySong, err
 }
