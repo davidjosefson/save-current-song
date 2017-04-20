@@ -7,10 +7,9 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path"
 	"save-current-song/notify"
 	"strings"
-	"path"
-
 )
 
 var conf Conf
@@ -21,7 +20,7 @@ func main() {
 	var dirPath string
 	var currentSong CurrentSong
 	var token string
-	var spotifySong SpotifySong
+	//var spotifySong SpotifySong
 
 	// INITIALIZATION
 	dirPath, err = getDirPath()
@@ -30,42 +29,48 @@ func main() {
 	readConf(dirPath)
 
 	// GET CURRENT SONG FROM LAST.FM
-	log.Println("Fetching current song from Last.FM..")
+	/*log.Println("Fetching current song from Last.FM..")
 	currentSong, err = getCurrentSong()
-	handleError(err, "fetching current song from Last.FM")
+	handleError(err, "fetching current song from Last.FM")*/
 
 	// REFRESH SPOTIFY TOKEN
 	log.Println("Refreshing Spotify token..")
 	token, err = refreshSpotifyToken()
 	handleError(err, "refreshing Spotify token")
 
+	// GET CURRENT SONG FROM SPOTIFY
+	log.Println("Fetching currently playing song from Spotify..")
+	currentSong, err = getCurrentSong(token)
+	handleError(err, "fetching current song from Spotify")
+
 	// SEARCHING SPOTIFY
-	log.Println("Searching for song at Spotify..")
+	/*log.Println("Searching for song at Spotify..")
 	spotifySong, err = searchSpotify(currentSong, token)
-	handleError(err, "searching for song at Spotify")
+	handleError(err, "searching for song at Spotify")*/
 
 	// ADD SONG TO PLAYLIST
 	log.Println("Adding song to playlist..")
-	err = addSongToPlaylist(token, spotifySong.SpotifyTracks.SpotifyItems[0].Id)
-	handleError(err, "adding song to playlist")
-	log.Println("Saved: " + spotifySong.SpotifyTracks.SpotifyItems[0].Artists[0].Name + " - " + spotifySong.SpotifyTracks.SpotifyItems[0].Name)
+	//err = addSongToPlaylist(token, spotifySong.SpotifyTracks.SpotifyItems[0].Id)
+	//handleError(err, "adding song to playlist")
+	//log.Println("Saved: " + spotifySong.SpotifyTracks.SpotifyItems[0].Artists[0].Name + " - " + spotifySong.SpotifyTracks.SpotifyItems[0].Name)
 
 	// SUCCESS
 	log.Println("Succeeded to add song to playlist!")
 
 	// SEND NOTIFICATION
-	foundSong := currentSong.RecentTracks.Tracks[0].Artist.Name + " - " + currentSong.RecentTracks.Tracks[0].Track
-	savedSong := spotifySong.SpotifyTracks.SpotifyItems[0].Artists[0].Name + " - " + spotifySong.SpotifyTracks.SpotifyItems[0].Name
-	notify.Notify(foundSong, savedSong)
+	//foundSong := currentSong.SpotifyItem.Artists[0].Name + " - " + currentSong.SpotifyItem.Name
+	foundSong := currentSong.SpotifyItem.Track
+	//savedSong := spotifySong.SpotifyTracks.SpotifyItems[0].Artists[0].Name + " - " + spotifySong.SpotifyTracks.SpotifyItems[0].Name
+	notify.Notify(foundSong, "hej")
 }
 
 func getDirPath() (string, error) {
 	ex, err := os.Executable()
-        return path.Dir(ex), err
+	return path.Dir(ex), err
 }
 
 func initializeLogging(dirPath string) {
-	file, err := os.OpenFile(dirPath + "/log.txt", os.O_CREATE|os.O_APPEND|os.O_RDWR, 0666)
+	file, err := os.OpenFile(dirPath+"/log.txt", os.O_CREATE|os.O_APPEND|os.O_RDWR, 0666)
 
 	if err == nil {
 		log.SetOutput(file)
@@ -85,20 +90,28 @@ func readConf(dirPath string) {
 	handleError(err, "decode conf.json")
 }
 
-func getCurrentSong() (CurrentSong, error) {
+func getCurrentSong(token string) (CurrentSong, error) {
 	var err error
 	var currentSong CurrentSong
 
-	lastFmUrl := "https://ws.audioscrobbler.com/2.0/?method=user.getrecenttracks&user=" + conf.LASTFM_USERNAME + "&api_key=" + conf.LASTFM_API_KEY + "&format=json&limit=1"
+	url := "https://api.spotify.com/v1/me/player/currently-playing"
 
-	// SENDING REQUEST AND RECEIVING RESPONSE
-	response, err := http.Get(lastFmUrl)
-	handleError(err, "sending request to get current song from last.fm")
+	// CREATING REQUEST
+	client := &http.Client{}
+	req, err := http.NewRequest("GET", url, nil)
+	handleError(err, "create request to fetch currently playing song")
+
+	// SENDING REQUEST
+	req.Header.Add("Authorization", "Bearer "+token)
+	resp, err := client.Do(req)
+	handleError(err, "sending request to add song to playlist")
 
 	// READING RESPONSE BODY
-	body, err := ioutil.ReadAll(response.Body)
-	defer response.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	defer resp.Body.Close()
 	handleError(err, "trying to read body after getting current song")
+
+	log.Println(body)
 
 	// UNMARSHALLING BODY TO JSON
 	err = json.Unmarshal(body, &currentSong)
@@ -106,7 +119,7 @@ func getCurrentSong() (CurrentSong, error) {
 
 	// SUCCESS
 	log.Println("Succeeded to get current song!")
-	log.Println("Found: " + currentSong.RecentTracks.Tracks[0].Artist.Name + " - " + currentSong.RecentTracks.Tracks[0].Track)
+	//log.Println("Found: " + currentSong.SpotifyItem.Artists[0].Name + " - " + currentSong.SpotifyItem.Name)
 
 	return currentSong, err
 }
@@ -138,11 +151,12 @@ func refreshSpotifyToken() (string, error) {
 
 	// SUCCESS
 	log.Println("Succeeded to refresh token!")
+	log.Println("TOKEN: " + spotifyToken.Token)
 
 	return spotifyToken.Token, err
 }
 
-func searchSpotify(currentSong CurrentSong, token string) (SpotifySong, error) {
+/*func searchSpotify(currentSong CurrentSong, token string) (SpotifySong, error) {
 	var err error
 	var spotifySong SpotifySong
 
@@ -172,7 +186,7 @@ func searchSpotify(currentSong CurrentSong, token string) (SpotifySong, error) {
 	log.Println("Succeeded to search for song at Spotify!")
 
 	return spotifySong, err
-}
+}*/
 
 func replaceSpacesWithPlus(textWithSpaces string) string {
 	return strings.Replace(textWithSpaces, " ", "+", -1)
