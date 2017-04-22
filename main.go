@@ -14,6 +14,8 @@ import (
 	"os"
 	"save-current-song/notify"
 	"strings"
+	"path"
+
 )
 
 var conf Conf
@@ -21,15 +23,16 @@ var conf Conf
 func main() {
 	var err error
 
+	var dirPath string
 	var currentSong CurrentSong
 	var token string
 	var spotifySong SpotifySong
 
-	// LOGGING
-	initializeLogging()
-
-	// READ CONFIG FILE
-	readConf()
+	// INITIALIZATION
+	dirPath, err = getDirPath()
+	handleError(err, "trying to create an os.Executable")
+	initializeLogging(dirPath)
+	readConf(dirPath)
 
 	// GET CURRENT SONG FROM LAST.FM
 	log.Println("Fetching current song from Last.FM..")
@@ -61,8 +64,14 @@ func main() {
 	notify.Notify(foundSong, savedSong)
 }
 
-func initializeLogging() {
-	file, err := os.OpenFile("log.txt", os.O_CREATE|os.O_APPEND|os.O_RDWR, 0666)
+func getDirPath() (string, error) {
+	ex, err := os.Executable()
+        return path.Dir(ex), err
+}
+
+func initializeLogging(dirPath string) {
+	file, err := os.OpenFile(dirPath + "/log.txt", os.O_CREATE|os.O_APPEND|os.O_RDWR, 0666)
+
 	if err == nil {
 		log.SetOutput(file)
 	}
@@ -71,8 +80,8 @@ func initializeLogging() {
 	log.Println("-------------------------")
 }
 
-func readConf() {
-	file, err := os.Open("conf.json")
+func readConf(dirPath string) {
+	file, err := os.Open(dirPath + "/conf.json")
 	handleError(err, "trying to open conf.json")
 
 	decoder := json.NewDecoder(file)
