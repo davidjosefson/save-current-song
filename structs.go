@@ -10,53 +10,22 @@ type Conf struct {
 	SPOTIFY_PLAYLIST_ID   string `json:"SPOTIFY_PLAYLIST_ID"`
 }
 
-/*type CurrentSong struct {
-	RecentTracks *RecentTracks `json:"recenttracks"`
-}
-
-type RecentTracks struct {
-	Tracks []Track `json:"track"`
-}
-
-type Track struct {
-	Artist *Artist `json:"artist"`
-	Track  string  `json:"name"`
-}
-
-type Artist struct {
-	Name string `json:"#text"`
-}*/
-
 type CurrentSong struct {
-	/*CurrentSongItem *CurrentSongItem `json:"item"`
-	Artists         []SpotifyArtist  `json:"artists"`*/
 	SpotifyItem *SpotifyItem `json:"item"`
 }
 
 type SpotifyItem struct {
-	Uri   string `json:"uri"`
-	Track string `json:"name"`
-}
-
-/*type SpotifySong struct {
-	SpotifyTracks *SpotifyTracks `json:"tracks"`
-}*/
-
-type SpotifyTracks struct {
-	SpotifyItems []SpotifyItem `json:"items"`
-}
-
-/*type SpotifyItem struct {
-	Id      string          `json:"id"`
-	Uri     string          `json:"uri"`
-	Name    string          `json:"name"`
-	Artists []SpotifyArtist `json:"artists"`
+	TimeStamp int             `json:"timestamp"`
+	Id        string          `json:"id"`
+	Uri       string          `json:"uri"`
+	Name      string          `json:"name"`
+	Artists   []SpotifyArtist `json:"artists"`
 }
 
 type SpotifyArtist struct {
 	Name string `json:"name"`
 }
-*/
+
 type SpotifyToken struct {
 	Token string `json:"access_token"`
 }

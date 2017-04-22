@@ -20,18 +20,12 @@ func main() {
 	var dirPath string
 	var currentSong CurrentSong
 	var token string
-	//var spotifySong SpotifySong
 
 	// INITIALIZATION
 	dirPath, err = getDirPath()
 	handleError(err, "trying to create an os.Executable")
 	initializeLogging(dirPath)
 	readConf(dirPath)
-
-	// GET CURRENT SONG FROM LAST.FM
-	/*log.Println("Fetching current song from Last.FM..")
-	currentSong, err = getCurrentSong()
-	handleError(err, "fetching current song from Last.FM")*/
 
 	// REFRESH SPOTIFY TOKEN
 	log.Println("Refreshing Spotify token..")
@@ -43,25 +37,18 @@ func main() {
 	currentSong, err = getCurrentSong(token)
 	handleError(err, "fetching current song from Spotify")
 
-	// SEARCHING SPOTIFY
-	/*log.Println("Searching for song at Spotify..")
-	spotifySong, err = searchSpotify(currentSong, token)
-	handleError(err, "searching for song at Spotify")*/
-
 	// ADD SONG TO PLAYLIST
 	log.Println("Adding song to playlist..")
-	//err = addSongToPlaylist(token, spotifySong.SpotifyTracks.SpotifyItems[0].Id)
-	//handleError(err, "adding song to playlist")
-	//log.Println("Saved: " + spotifySong.SpotifyTracks.SpotifyItems[0].Artists[0].Name + " - " + spotifySong.SpotifyTracks.SpotifyItems[0].Name)
+	err = addSongToPlaylist(token, currentSong.SpotifyItem.Uri)
+	handleError(err, "adding song to playlist")
+	log.Println("Saved: " + currentSong.SpotifyItem.Artists[0].Name + " - " + currentSong.SpotifyItem.Name)
 
 	// SUCCESS
 	log.Println("Succeeded to add song to playlist!")
 
 	// SEND NOTIFICATION
-	//foundSong := currentSong.SpotifyItem.Artists[0].Name + " - " + currentSong.SpotifyItem.Name
-	foundSong := currentSong.SpotifyItem.Track
-	//savedSong := spotifySong.SpotifyTracks.SpotifyItems[0].Artists[0].Name + " - " + spotifySong.SpotifyTracks.SpotifyItems[0].Name
-	notify.Notify(foundSong, "hej")
+	addedSong := currentSong.SpotifyItem.Artists[0].Name + " - " + currentSong.SpotifyItem.Name
+	notify.Notify(addedSong)
 }
 
 func getDirPath() (string, error) {
@@ -111,15 +98,13 @@ func getCurrentSong(token string) (CurrentSong, error) {
 	defer resp.Body.Close()
 	handleError(err, "trying to read body after getting current song")
 
-	log.Println(body)
-
 	// UNMARSHALLING BODY TO JSON
 	err = json.Unmarshal(body, &currentSong)
 	handleError(err, "unmarshalling body after getting current song")
 
 	// SUCCESS
 	log.Println("Succeeded to get current song!")
-	//log.Println("Found: " + currentSong.SpotifyItem.Artists[0].Name + " - " + currentSong.SpotifyItem.Name)
+	log.Println("Found: " + currentSong.SpotifyItem.Artists[0].Name + " - " + currentSong.SpotifyItem.Name)
 
 	return currentSong, err
 }
@@ -156,46 +141,14 @@ func refreshSpotifyToken() (string, error) {
 	return spotifyToken.Token, err
 }
 
-/*func searchSpotify(currentSong CurrentSong, token string) (SpotifySong, error) {
-	var err error
-	var spotifySong SpotifySong
-
-	query := replaceSpacesWithPlus(currentSong.RecentTracks.Tracks[0].Artist.Name) + "+" + replaceSpacesWithPlus(currentSong.RecentTracks.Tracks[0].Track)
-	spotifyUrl := "https://api.spotify.com/v1/search?q=" + query + "&type=track&market=SE&limit=1"
-
-	// CREATING REQUEST
-	client := &http.Client{}
-	req, err := http.NewRequest("GET", spotifyUrl, nil)
-	handleError(err, "creating request to search for song at Spotify")
-
-	// SENDING REQUEST
-	req.Header.Add("Authorization", "Bearer "+token)
-	resp, err := client.Do(req)
-	handleError(err, "sending request to search for song at Spotify")
-
-	// READING RESPONSE BODY
-	body, err := ioutil.ReadAll(resp.Body)
-	defer resp.Body.Close()
-	handleError(err, "trying to read response body after search for song at Spotify")
-
-	// UNMARSHALLING BODY TO JSON
-	err = json.Unmarshal(body, &spotifySong)
-	handleError(err, "unmarshalling response body to json after search for song at Spotify")
-
-	// SUCCESS
-	log.Println("Succeeded to search for song at Spotify!")
-
-	return spotifySong, err
-}*/
-
 func replaceSpacesWithPlus(textWithSpaces string) string {
 	return strings.Replace(textWithSpaces, " ", "+", -1)
 }
 
-func addSongToPlaylist(token string, songId string) error {
+func addSongToPlaylist(token string, currentSongUri string) error {
 	var err error
 
-	spotifyUrl := "https://api.spotify.com/v1/users/" + conf.SPOTIFY_USERNAME + "/playlists/" + conf.SPOTIFY_PLAYLIST_ID + "/tracks?uris=spotify%3Atrack%3A" + songId
+	spotifyUrl := "https://api.spotify.com/v1/users/" + conf.SPOTIFY_USERNAME + "/playlists/" + conf.SPOTIFY_PLAYLIST_ID + "/tracks?uris=" + currentSongUri
 
 	// CREATING REQUEST
 	client := &http.Client{}

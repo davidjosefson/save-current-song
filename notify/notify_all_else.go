@@ -2,6 +2,6 @@
 
 package notify
 
-func Notify(foundSong string, savedSong string) {
+func Notify(addedSong string) {
 	// if not linux or osx, do nothing
 }
