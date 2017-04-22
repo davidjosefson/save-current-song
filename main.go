@@ -1,3 +1,8 @@
+// TODO:
+// add separate init-script to fill conf.json
+// - lookup launching a browser for oath via spotify: https://stackoverflow.com/questions/10377243/how-can-i-launch-a-process-that-is-not-a-file-in-go-e-g-open-a-web-page
+// - lastfm-token?
+
 package main
 
 import (
