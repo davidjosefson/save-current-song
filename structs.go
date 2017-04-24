@@ -14,12 +14,19 @@ type CurrentSong struct {
 	SpotifyItem *SpotifyItem `json:"item"`
 }
 
+type SongsInPlaylist struct {
+	PlaylistItems []PlaylistItem `json:"items"`
+}
+
+type PlaylistItem struct {
+	Track *SpotifyItem `json:"track"`
+}
+
 type SpotifyItem struct {
-	TimeStamp int             `json:"timestamp"`
-	Id        string          `json:"id"`
-	Uri       string          `json:"uri"`
-	Name      string          `json:"name"`
-	Artists   []SpotifyArtist `json:"artists"`
+	Id      string          `json:"id"`
+	Uri     string          `json:"uri"`
+	Name    string          `json:"name"`
+	Artists []SpotifyArtist `json:"artists"`
 }
 
 type SpotifyArtist struct {

@@ -7,8 +7,8 @@ import (
 	"os/exec"
 )
 
-func Notify(addedSong string) {
-	cmd := exec.Command("notify-send", "SAVE CURRENT SONG\nAdded: "+addedSong)
+func Notify(message string) {
+	cmd := exec.Command("notify-send", "SAVE CURRENT SONG\n"+message)
 	err := cmd.Run()
 
 	if err != nil {

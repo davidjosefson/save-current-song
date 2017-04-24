@@ -14,7 +14,6 @@ import (
 	"os"
 	"path"
 	"save-current-song/notify"
-	"strings"
 )
 
 var conf Conf
@@ -25,6 +24,7 @@ func main() {
 	var dirPath string
 	var currentSong CurrentSong
 	var token string
+	var songExists bool
 
 	// INITIALIZATION
 	dirPath, err = getDirPath()
@@ -42,6 +42,17 @@ func main() {
 	currentSong, err = getCurrentSong(token)
 	handleError(err, "fetching current song from Spotify")
 
+	// CHECK IF CURRENT SONG ALREADY IS IN PLAYLIST
+	log.Println("Checking if current song already is in playlist..")
+	songExists, err = songAlreadyInPlaylist(token, currentSong)
+	handleError(err, "checking if current song was already in playlist")
+
+	if songExists {
+		notify.Notify("The song already exists in playlist and wasnt added.\n(" + currentSong.SpotifyItem.Artists[0].Name + " - " + currentSong.SpotifyItem.Name + ")")
+		log.Println("The song already exists in playlist and wasnt added.")
+		return
+	}
+
 	// ADD SONG TO PLAYLIST
 	log.Println("Adding song to playlist..")
 	err = addSongToPlaylist(token, currentSong.SpotifyItem.Uri)
@@ -52,8 +63,7 @@ func main() {
 	log.Println("Succeeded to add song to playlist!")
 
 	// SEND NOTIFICATION
-	addedSong := currentSong.SpotifyItem.Artists[0].Name + " - " + currentSong.SpotifyItem.Name
-	notify.Notify(addedSong)
+	notify.Notify("Added: " + currentSong.SpotifyItem.Artists[0].Name + " - " + currentSong.SpotifyItem.Name)
 }
 
 func getDirPath() (string, error) {
@@ -80,6 +90,37 @@ func readConf(dirPath string) {
 	conf = Conf{}
 	err = decoder.Decode(&conf)
 	handleError(err, "decode conf.json")
+}
+
+func refreshSpotifyToken() (string, error) {
+	var err error
+	var spotifyToken SpotifyToken
+
+	// CREATING REQUEST
+	spotifyUrl := "https://accounts.spotify.com/api/token"
+	formValues := url.Values{}
+	formValues.Set("grant_type", "refresh_token")
+	formValues.Set("refresh_token", conf.SPOTIFY_REFRESH_TOKEN)
+	formValues.Set("client_id", conf.SPOTIFY_CLIENT_ID)
+	formValues.Set("client_secret", conf.SPOTIFY_CLIENT_SECRET)
+
+	// SENDING REQUEST AND RECEIVING RESPONSE
+	resp, err := http.PostForm(spotifyUrl, formValues)
+	handleError(err, "POSTing to refresh Spotify token")
+
+	// READING RESPONSE BODY
+	body, err := ioutil.ReadAll(resp.Body)
+	defer resp.Body.Close()
+	handleError(err, "trying to read body after POSTing to refresh Spotify token")
+
+	// UNMARSHALLING BODY TO JSON
+	err = json.Unmarshal(body, &spotifyToken)
+	handleError(err, "unmarshalling body after refreshing Spotify token")
+
+	// SUCCESS
+	log.Println("Succeeded to refresh token!")
+
+	return spotifyToken.Token, err
 }
 
 func getCurrentSong(token string) (CurrentSong, error) {
@@ -114,40 +155,42 @@ func getCurrentSong(token string) (CurrentSong, error) {
 	return currentSong, err
 }
 
-func refreshSpotifyToken() (string, error) {
+func songAlreadyInPlaylist(token string, currentSong CurrentSong) (bool, error) {
 	var err error
-	var spotifyToken SpotifyToken
+	var songExists bool
+	var songsInPlaylist SongsInPlaylist
+
+	spotifyUrl := "https://api.spotify.com/v1/users/" + conf.SPOTIFY_USERNAME + "/playlists/" + conf.SPOTIFY_PLAYLIST_ID + "/tracks?fields=items(track(id,name,uri,artists))"
 
 	// CREATING REQUEST
-	spotifyUrl := "https://accounts.spotify.com/api/token"
-	formValues := url.Values{}
-	formValues.Set("grant_type", "refresh_token")
-	formValues.Set("refresh_token", conf.SPOTIFY_REFRESH_TOKEN)
-	formValues.Set("client_id", conf.SPOTIFY_CLIENT_ID)
-	formValues.Set("client_secret", conf.SPOTIFY_CLIENT_SECRET)
+	client := &http.Client{}
+	req, err := http.NewRequest("GET", spotifyUrl, nil)
+	handleError(err, "create request to get songs in playlist")
 
-	// SENDING REQUEST AND RECEIVING RESPONSE
-	resp, err := http.PostForm(spotifyUrl, formValues)
-	handleError(err, "POSTing to refresh Spotify token")
+	// SENDING REQUEST
+	req.Header.Add("Authorization", "Bearer "+token)
+	resp, err := client.Do(req)
+	handleError(err, "sending request to get songs in playlist")
 
 	// READING RESPONSE BODY
 	body, err := ioutil.ReadAll(resp.Body)
 	defer resp.Body.Close()
-	handleError(err, "trying to read body after POSTing to refresh Spotify token")
+	handleError(err, "trying to read body after getting songs in playlist")
 
 	// UNMARSHALLING BODY TO JSON
-	err = json.Unmarshal(body, &spotifyToken)
-	handleError(err, "unmarshalling body after refreshing Spotify token")
+	err = json.Unmarshal(body, &songsInPlaylist)
+	handleError(err, "unmarshalling body after getting songs in playlist")
 
-	// SUCCESS
-	log.Println("Succeeded to refresh token!")
-	log.Println("TOKEN: " + spotifyToken.Token)
+	//CHECKING IF CURRENT SONG IS IN PLAYLIST
+	songExists = false
+	for i := 0; i < len(songsInPlaylist.PlaylistItems); i++ {
+		if currentSong.SpotifyItem.Id == songsInPlaylist.PlaylistItems[i].Track.Id {
+			songExists = true
+			break
+		}
+	}
 
-	return spotifyToken.Token, err
-}
-
-func replaceSpacesWithPlus(textWithSpaces string) string {
-	return strings.Replace(textWithSpaces, " ", "+", -1)
+	return songExists, err
 }
 
 func addSongToPlaylist(token string, currentSongUri string) error {
